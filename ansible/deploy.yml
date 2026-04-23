@@ -3,24 +3,22 @@
   gather_facts: false
 
   collections:
-    - community.kubernetes
+    - kubernetes.core        # ← was community.kubernetes
 
   tasks:
 
     - name: Deploy/Upgrade Helm Chart
-      community.kubernetes.helm:
+      kubernetes.core.helm:  # ← was community.kubernetes.helm
         name: notes-app
         chart_ref: ./django-notes-chart
         release_namespace: default
         create_namespace: true
         state: present
-
         values:
           django:
             image:
               repository: "{{ image_repo }}"
               tag: "{{ image_tag }}"
-
           nginx:
             image:
               repository: "{{ frontend_repo }}"
