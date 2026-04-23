@@ -97,5 +97,6 @@ jobs:
           ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook \
           -i "${{ steps.tf_output.outputs.ip }}," \
           --private-key ~/.ssh/python-pair.pem \
+          -u ubuntu \
           ansible/deploy.yml \
-          --extra-vars "image_repo=$BACKEND_IMAGE image_tag=${{ github.sha }} frontend_repo=$FRONTEND_IMAGE frontend_tag=${{ github.sha }}" 
+          --extra-vars "image_repo=$BACKEND_IMAGE image_tag=${{ github.sha }} frontend_repo=$FRONTEND_IMAGE frontend_tag=${{ github.sha }}"
