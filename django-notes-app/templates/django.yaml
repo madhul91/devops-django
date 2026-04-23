@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django
+spec:
+  replicas: {{ .Values.django.replicas }}
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      containers:
+        - name: django
+          image: {{ .Values.django.image }}
+          ports:
+            - containerPort: {{ .Values.django.port }}
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              python manage.py migrate --noinput && \
+              gunicorn notesapp.wsgi:application --bind 0.0.0.0:8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django
+spec:
+  selector:
+    app: django
+  ports:
+    - port: 8000
