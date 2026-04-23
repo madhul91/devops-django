@@ -79,7 +79,7 @@ jobs:
     - name: Install Ansible
       run: |
          pip install ansible
-         ansible-galaxy collection install community.kubernetes
+         ansible-galaxy collection install kubernetes.core
 
     # 16 Add EC2 to known hosts
     - name: Add EC2 to known hosts
@@ -93,6 +93,8 @@ jobs:
     # ⚙️ Setup Helm
     - name: Setup Helm
       uses: azure/setup-helm@v4
+      with:
+        version: v3.17.0
 
     # 🔐 Setup kubeconfig
     - name: Configure Kubeconfig
