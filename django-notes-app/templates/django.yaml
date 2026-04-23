@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: django
 spec:
-  replicas: {{ .Values.django.replicas }}
+  replicas: {{ .Values.replicaCount.django }}
   selector:
     matchLabels:
       app: django
@@ -14,9 +14,22 @@ spec:
     spec:
       containers:
         - name: django
-          image: {{ .Values.django.image }}
+          image: "{{ .Values.django.image.repository }}:{{ .Values.django.image.tag }}"
           ports:
             - containerPort: {{ .Values.django.port }}
+
+          env:
+            - name: DB_NAME
+              value: {{ .Values.env.DB_NAME }}
+            - name: DB_USER
+              value: {{ .Values.env.DB_USER }}
+            - name: DB_PASSWORD
+              value: {{ .Values.env.DB_PASSWORD }}
+            - name: DB_PORT
+              value: {{ .Values.env.DB_PORT }}
+            - name: DB_HOST
+              value: {{ .Values.env.DB_HOST }}
+
           command: ["/bin/sh"]
           args:
             - -c
@@ -33,3 +46,4 @@ spec:
     app: django
   ports:
     - port: 8000
+      targetPort: 8000

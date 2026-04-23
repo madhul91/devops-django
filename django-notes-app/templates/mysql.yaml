@@ -6,6 +6,7 @@ spec:
   selector:
     matchLabels:
       app: mysql
+  replicas: 1
   template:
     metadata:
       labels:
@@ -13,14 +14,19 @@ spec:
     spec:
       containers:
         - name: mysql
-          image: {{ .Values.mysql.image }}
-          env:
-            - name: MYSQL_ROOT_PASSWORD
-              value: "{{ .Values.mysql.rootPassword }}"
-            - name: MYSQL_DATABASE
-              value: "{{ .Values.mysql.db }}"
+          image: "{{ .Values.mysql.image.repository }}:{{ .Values.mysql.image.tag }}"
           ports:
             - containerPort: 3306
+
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.existingSecret }}
+                  key: {{ .Values.mysql.secretKey }}
+
+            - name: MYSQL_DATABASE
+              value: {{ .Values.mysql.database }}
 ---
 apiVersion: v1
 kind: Service
@@ -31,3 +37,4 @@ spec:
     app: mysql
   ports:
     - port: 3306
+      targetPort: 3306

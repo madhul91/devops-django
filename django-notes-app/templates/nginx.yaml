@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   name: nginx
 spec:
+  replicas: {{ .Values.replicaCount.nginx }}
   selector:
     matchLabels:
       app: nginx
@@ -13,19 +14,20 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: {{ .Values.nginx.image }}
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
           ports:
             - containerPort: {{ .Values.nginx.port }}
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: nginx
 spec:
-  type: NodePort
+  type: {{ .Values.nginx.service.type }}
   selector:
     app: nginx
   ports:
-    - port: 80
-      targetPort: 80
-      nodePort: {{ .Values.nginx.nodePort }}
+    - port: {{ .Values.nginx.port }}
+      targetPort: {{ .Values.nginx.port }}
+      nodePort: {{ .Values.nginx.service.nodePort }}
