@@ -1,18 +1,61 @@
-- name: Deploy Django Notes App using Helm
-  hosts: localhost
+# ansible/deploy.yml
+---
+- name: Setup KIND Cluster and Deploy App
+  hosts: ec2
   gather_facts: false
-
-  collections:
-    - kubernetes.core        # ← was community.kubernetes
+  become: true
 
   tasks:
 
+    # 1. Docker install karo
+    - name: Install Docker
+      shell: |
+        curl -fsSL https://get.docker.com | sh
+        usermod -aG docker ubuntu
+
+    # 2. kubectl install karo
+    - name: Install kubectl
+      shell: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+    # 3. KIND install karo
+    - name: Install KIND
+      shell: |
+        curl -Lo /usr/local/bin/kind \
+          https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
+        chmod +x /usr/local/bin/kind
+
+    # 4. KIND cluster banao
+    - name: Create KIND cluster
+      shell: |
+        kind create cluster --name devops-cluster
+      become: false
+      ignore_errors: true  # already exists toh error na aaye
+
+    # 5. kubeconfig set karo
+    - name: Set kubeconfig
+      shell: |
+        mkdir -p ~/.kube
+        kind get kubeconfig --name devops-cluster > ~/.kube/config
+        chmod 600 ~/.kube/config
+      become: false
+
+    # 6. Helm install karo
+    - name: Install Helm
+      shell: |
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | \
+        DESIRED_VERSION=v3.17.0 bash
+
+    # 7. App deploy karo
     - name: Deploy/Upgrade Helm Chart
-      kubernetes.core.helm:  # ← was community.kubernetes.helm
+      become: false
+      kubernetes.core.helm:
         name: notes-app
         chart_ref: ./django-notes-chart
         release_namespace: default
         create_namespace: true
+        kubeconfig: /home/ubuntu/.kube/config
         state: present
         values:
           django:

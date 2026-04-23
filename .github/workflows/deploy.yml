@@ -87,20 +87,9 @@ jobs:
         ssh-keyscan -H ${{ steps.tf_output.outputs.ip }} >> ~/.ssh/known_hosts
 
     # ⚙️ Setup kubectl
-    - name: Setup kubectl
-      uses: azure/setup-kubectl@v4
+   
 
-    # ⚙️ Setup Helm
-    - name: Setup Helm
-      uses: azure/setup-helm@v4
-      with:
-        version: v3.17.0
-
-    # 🔐 Setup kubeconfig
-    - name: Configure Kubeconfig
-      run: |
-        echo "${{ secrets.KUBECONFIG }}" > kubeconfig
-        export KUBECONFIG=$PWD/kubeconfig
+   
 
     # 🚀 Deploy using Ansible + Helm
     - name: Deploy App
