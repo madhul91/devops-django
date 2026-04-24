@@ -40,12 +40,13 @@ mysql:
     pullPolicy: IfNotPresent
   port: 3306
   database: test_db
+  auth:
+    rootPassword: "root"
   # Root password is stored in a Kubernetes Secret.
   # Create it before deploying:
   #   kubectl create secret generic mysql-secret \
   #     --from-literal=root-password=<your-password>
-  existingSecret: mysql-secret
-  secretKey: root-password
+
   # Persistent storage for MySQL data
   persistence:
     enabled: true

@@ -22,11 +22,11 @@ spec:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.mysql.existingSecret }}
-                  key: {{ .Values.mysql.secretKey }}
+                  name: mysql-secret
+                  key: root-password
 
             - name: MYSQL_DATABASE
-              value: {{ .Values.mysql.database }}
+              value: {{ .Values.mysql.database | quote }}
 ---
 apiVersion: v1
 kind: Service
