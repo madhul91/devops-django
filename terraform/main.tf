@@ -59,7 +59,7 @@ resource "aws_security_group" "devops_sg" {
 
 resource "aws_instance" "devops_ec2" {
   ami           = var.ami
-  instance_type = "t3.micro"
+  instance_type = "t3.small"
   key_name      = var.key_name
 
   # subnet_id              = data.aws_subnets.public_subnets[0]
