@@ -99,7 +99,7 @@
         KUBECONFIG: "{{ kubeconfig_path }}"
       kubernetes.core.helm:
         name: notes-app
-        chart_ref: "{{ home_dir }}/app/django-notes-chart"
+        chart_ref: "{{ home_dir }}/app/django-notes-app"
         release_namespace: default
         create_namespace: true
         state: present
