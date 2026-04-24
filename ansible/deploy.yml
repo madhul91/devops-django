@@ -1,61 +1,102 @@
-# ansible/deploy.yml
 ---
 - name: Setup KIND Cluster and Deploy App
   hosts: all
-  gather_facts: false
   become: true
+  vars:
+    user: ubuntu
+    home_dir: /home/ubuntu
+    kubeconfig_path: /home/ubuntu/.kube/config
 
   tasks:
 
-    # 1. Docker install karo
+    # 1. Install Docker
     - name: Install Docker
       shell: |
         curl -fsSL https://get.docker.com | sh
-        usermod -aG docker ubuntu
+        usermod -aG docker {{ user }}
+      args:
+        executable: /bin/bash
 
-    # 2. kubectl install karo
+    - name: Restart Docker
+      service:
+        name: docker
+        state: restarted
+
+    # 2. Install kubectl
     - name: Install kubectl
       shell: |
         curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
         install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+      args:
+        executable: /bin/bash
 
-    # 3. KIND install karo
+    # 3. Install KIND
     - name: Install KIND
       shell: |
-        curl -Lo /usr/local/bin/kind \
-          https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
+        curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
         chmod +x /usr/local/bin/kind
+      args:
+        executable: /bin/bash
 
-    # 4. KIND cluster banao
+    # 4. Create KIND cluster (idempotent)
     - name: Create KIND cluster
       shell: |
-        kind create cluster --name devops-cluster
-      become: false
-      ignore_errors: true  # already exists toh error na aaye
+        kind get clusters | grep devops-cluster || kind create cluster --name devops-cluster
+      args:
+        executable: /bin/bash
 
-    # 5. kubeconfig set karo
-    - name: Set kubeconfig
+    # 5. Setup kubeconfig (VERY IMPORTANT FIX)
+    - name: Setup kubeconfig for ubuntu user
+      become: false
       shell: |
         mkdir -p ~/.kube
-        kind get kubeconfig --name devops-cluster > ~/.kube/config
+        kind export kubeconfig --name devops-cluster
         chmod 600 ~/.kube/config
-      become: false
+      args:
+        executable: /bin/bash
 
-    # 6. Helm install karo
+    # 6. Wait for cluster to be ready
+    - name: Wait for Kubernetes nodes
+      become: false
+      shell: |
+        export KUBECONFIG=~/.kube/config
+        kubectl wait --for=condition=Ready nodes --all --timeout=180s
+      args:
+        executable: /bin/bash
+
+    # 7. Verify cluster
+    - name: Verify Kubernetes cluster
+      become: false
+      shell: |
+        export KUBECONFIG=~/.kube/config
+        kubectl get nodes
+      args:
+        executable: /bin/bash
+
+    # 8. Install Helm
     - name: Install Helm
       shell: |
-        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | \
-        DESIRED_VERSION=v3.17.0 bash
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      args:
+        executable: /bin/bash
 
-    # 7. App deploy karo
+    # 9. Clone your repo (IMPORTANT)
+    - name: Clone application repo
+      become: false
+      git:
+        repo: "https://github.com/madhul91/devops-django.git"
+        dest: "{{ home_dir }}/app"
+
+    # 10. Deploy using Helm (FINAL STEP)
     - name: Deploy/Upgrade Helm Chart
       become: false
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
       kubernetes.core.helm:
         name: notes-app
-        chart_ref: ./django-notes-chart
+        chart_ref: "{{ home_dir }}/app/django-notes-chart"
         release_namespace: default
         create_namespace: true
-        kubeconfig: /home/ubuntu/.kube/config
         state: present
         values:
           django:
