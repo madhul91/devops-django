@@ -11,7 +11,7 @@ replicaCount:
 django:
   image:
     repository: madhul423/django
-    tag: "latest"
+    tag: ""
     pullPolicy: IfNotPresent
   port: 8000
 
@@ -19,13 +19,13 @@ env:
   DB_NAME: test_db
   DB_USER: root
   DB_PASSWORD: root
-  DB_PORT: "3306"
+  DB_PORT: 3306
   DB_HOST: mysql
 
 nginx:
   image:
     repository: madhul423/nginx
-    tag: "latest"
+    tag: ""
     pullPolicy: IfNotPresent
   port: 80
   service:
@@ -36,7 +36,7 @@ nginx:
 mysql:
   image:
     repository: mysql
-    tag: "latest"
+    tag: "8.0"
     pullPolicy: IfNotPresent
   port: 3306
   database: test_db

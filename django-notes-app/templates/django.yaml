@@ -20,15 +20,15 @@ spec:
 
           env:
             - name: DB_NAME
-              value: {{ .Values.env.DB_NAME }}
+              value: {{ .Values.env.DB_NAME | quote }}
             - name: DB_USER
-              value: {{ .Values.env.DB_USER }}
+              value: {{ .Values.env.DB_USER | quote}}
             - name: DB_PASSWORD
-              value: {{ .Values.env.DB_PASSWORD }}
+              value: {{ .Values.env.DB_PASSWORD | quote }}
             - name: DB_PORT
-              value: {{ .Values.env.DB_PORT }}
+              value: {{ .Values.env.DB_PORT | quote }}
             - name: DB_HOST
-              value: {{ .Values.env.DB_HOST }}
+              value: {{ .Values.env.DB_HOST | quote }}
 
           command: ["/bin/sh"]
           args:
