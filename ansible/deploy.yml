@@ -46,14 +46,19 @@
         executable: /bin/bash
 
     # 5. Setup kubeconfig (VERY IMPORTANT FIX)
-    - name: Setup kubeconfig for ubuntu user
-      become: false
+    - name: Setup kubeconfig (FIXED)
+      become: true
       shell: |
-        mkdir -p ~/.kube
-        kind export kubeconfig --name devops-cluster
-        chmod 600 ~/.kube/config
+       mkdir -p /root/.kube
+       kind export kubeconfig --name devops-cluster --kubeconfig /root/.kube/config
+
+       mkdir -p /home/ubuntu/.kube
+       cp /root/.kube/config /home/ubuntu/.kube/config
+
+       chown -R ubuntu:ubuntu /home/ubuntu/.kube
+       chmod 600 /home/ubuntu/.kube/config
       args:
-        executable: /bin/bash
+         executable: /bin/bash
 
     # 6. Wait for cluster to be ready
     - name: Wait for Kubernetes nodes
