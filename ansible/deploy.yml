@@ -1,7 +1,8 @@
 ---
-- name: Setup KIND Cluster and Deploy App
+- name: Setup KIND Cluster and Deploy App + Monitoring
   hosts: all
   become: true
+
   vars:
     user: ubuntu
     home_dir: /home/ubuntu
@@ -9,7 +10,9 @@
 
   tasks:
 
+    # -------------------------------
     # 1. Install Docker
+    # -------------------------------
     - name: Install Docker
       shell: |
         curl -fsSL https://get.docker.com | sh
@@ -22,15 +25,19 @@
         name: docker
         state: restarted
 
+    # -------------------------------
     # 2. Install kubectl
+    # -------------------------------
     - name: Install kubectl
       shell: |
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
         install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
       args:
         executable: /bin/bash
 
+    # -------------------------------
     # 3. Install KIND
+    # -------------------------------
     - name: Install KIND
       shell: |
         curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
@@ -38,30 +45,35 @@
       args:
         executable: /bin/bash
 
-    # 4. Create KIND cluster (idempotent)
+    # -------------------------------
+    # 4. Create Cluster
+    # -------------------------------
     - name: Create KIND cluster
       shell: |
         kind get clusters | grep devops-cluster || kind create cluster --name devops-cluster
       args:
         executable: /bin/bash
 
-    # 5. Setup kubeconfig (VERY IMPORTANT FIX)
-    - name: Setup kubeconfig (FIXED)
-      become: true
+    # -------------------------------
+    # 5. Setup kubeconfig
+    # -------------------------------
+    - name: Setup kubeconfig
       shell: |
-       mkdir -p /root/.kube
-       kind export kubeconfig --name devops-cluster --kubeconfig /root/.kube/config
+        mkdir -p /root/.kube
+        kind export kubeconfig --name devops-cluster --kubeconfig /root/.kube/config
 
-       mkdir -p /home/ubuntu/.kube
-       cp /root/.kube/config /home/ubuntu/.kube/config
+        mkdir -p /home/ubuntu/.kube
+        cp /root/.kube/config /home/ubuntu/.kube/config
 
-       chown -R ubuntu:ubuntu /home/ubuntu/.kube
-       chmod 600 /home/ubuntu/.kube/config
+        chown -R ubuntu:ubuntu /home/ubuntu/.kube
+        chmod 600 /home/ubuntu/.kube/config
       args:
-         executable: /bin/bash
+        executable: /bin/bash
 
-    # 6. Wait for cluster to be ready
-    - name: Wait for Kubernetes nodes
+    # -------------------------------
+    # 6. Wait for cluster
+    # -------------------------------
+    - name: Wait for nodes
       become: false
       shell: |
         export KUBECONFIG=~/.kube/config
@@ -69,8 +81,10 @@
       args:
         executable: /bin/bash
 
+    # -------------------------------
     # 7. Verify cluster
-    - name: Verify Kubernetes cluster
+    # -------------------------------
+    - name: Verify cluster
       become: false
       shell: |
         export KUBECONFIG=~/.kube/config
@@ -78,22 +92,28 @@
       args:
         executable: /bin/bash
 
+    # -------------------------------
     # 8. Install Helm
+    # -------------------------------
     - name: Install Helm
       shell: |
         curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
       args:
         executable: /bin/bash
 
-    # 9. Clone your repo (IMPORTANT)
-    - name: Clone application repo
+    # -------------------------------
+    # 9. Clone Repo
+    # -------------------------------
+    - name: Clone repo
       become: false
       git:
         repo: "https://github.com/madhul91/devops-django.git"
         dest: "{{ home_dir }}/app"
 
-    # 10. Deploy using Helm (FINAL STEP)
-    - name: Deploy/Upgrade Helm Chart
+    # -------------------------------
+    # 10. Deploy App
+    # -------------------------------
+    - name: Deploy Django App
       become: false
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
@@ -112,53 +132,55 @@
             image:
               repository: "{{ frontend_repo }}"
               tag: "{{ frontend_tag }}"
-     11. Add Prometheus Repo
-  # -------------------------------
-  - name: Add Prometheus Helm repo
-    become: false
-    shell: |
-      helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-      helm repo update
-    environment:
-      KUBECONFIG: "{{ kubeconfig_path }}"
 
-  # -------------------------------
-  # 12. Install Monitoring Stack
-  # -------------------------------
-  - name: Install Prometheus + Grafana
-    become: false
-    environment:
-      KUBECONFIG: "{{ kubeconfig_path }}"
-    kubernetes.core.helm:
-      name: monitoring
-      chart_ref: prometheus-community/kube-prometheus-stack
-      release_namespace: monitoring
-      create_namespace: true
-      state: present
+    # -------------------------------
+    # 11. Add Prometheus Repo
+    # -------------------------------
+    - name: Add Prometheus Helm repo
+      become: false
+      shell: |
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+        helm repo update
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
-  # -------------------------------
-  # 13. Expose Grafana
-  # -------------------------------
-  - name: Expose Grafana via NodePort
-    become: false
-    shell: |
-      export KUBECONFIG={{ kubeconfig_path }}
-      kubectl patch svc monitoring-grafana -n monitoring \
-      -p '{"spec": {"type": "NodePort"}}'
-    args:
-      executable: /bin/bash
+    # -------------------------------
+    # 12. Install Monitoring
+    # -------------------------------
+    - name: Install Prometheus + Grafana
+      become: false
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      kubernetes.core.helm:
+        name: monitoring
+        chart_ref: prometheus-community/kube-prometheus-stack
+        release_namespace: monitoring
+        create_namespace: true
+        state: present
 
-  # -------------------------------
-  # 14. Get Grafana Password
-  # -------------------------------
-  - name: Get Grafana password
-    become: false
-    shell: |
-      export KUBECONFIG={{ kubeconfig_path }}
-      kubectl get secret monitoring-grafana -n monitoring \
-      -o jsonpath="{.data.admin-password}" | base64 --decode
-    register: grafana_pass
+    # -------------------------------
+    # 13. Expose Grafana
+    # -------------------------------
+    - name: Expose Grafana
+      become: false
+      shell: |
+        export KUBECONFIG={{ kubeconfig_path }}
+        kubectl patch svc monitoring-grafana -n monitoring \
+        -p '{"spec": {"type": "NodePort"}}'
+      args:
+        executable: /bin/bash
 
-  - name: Show Grafana Password
-    debug:
-      msg: "Grafana Password: {{ grafana_pass.stdout }}"         
+    # -------------------------------
+    # 14. Get Grafana Password
+    # -------------------------------
+    - name: Get Grafana password
+      become: false
+      shell: |
+        export KUBECONFIG={{ kubeconfig_path }}
+        kubectl get secret monitoring-grafana -n monitoring \
+        -o jsonpath="{.data.admin-password}" | base64 --decode
+      register: grafana_pass
+
+    - name: Show password
+      debug:
+        msg: "Grafana Password: {{ grafana_pass.stdout }}"
