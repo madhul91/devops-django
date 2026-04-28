@@ -133,4 +133,49 @@
               repository: "{{ frontend_repo }}"
               tag: "{{ frontend_tag }}"
 
-    
+    # 11. Install Monitoring Stack
+    - name: Install Prometheus + Grafana
+      become: false
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      kubernetes.core.helm:
+        name: monitoring
+        chart_ref: prometheus-community/kube-prometheus-stack
+        release_namespace: monitoring
+        create_namespace: true
+        state: present
+
+    # 12. Expose Grafana
+    - name: Expose Grafana via NodePort
+      become: false
+      shell: |
+        export KUBECONFIG={{ kubeconfig_path }}
+        kubectl patch svc monitoring-grafana -n monitoring \
+        -p '{"spec": {"type": "NodePort"}}'
+      args:
+        executable: /bin/bash
+
+    # 13. Get Grafana Port
+    - name: Get Grafana NodePort
+      become: false
+      shell: |
+        export KUBECONFIG={{ kubeconfig_path }}
+        kubectl get svc monitoring-grafana -n monitoring \
+        -o jsonpath="{.spec.ports[0].nodePort}"
+      register: grafana_port
+
+    # 14. Get Grafana Password
+    - name: Get Grafana password
+      become: false
+      shell: |
+        export KUBECONFIG={{ kubeconfig_path }}
+        kubectl get secret monitoring-grafana -n monitoring \
+        -o jsonpath="{.data.admin-password}" | base64 --decode
+      register: grafana_pass
+
+    - name: Show Grafana Details
+      debug:
+        msg:
+          - "Grafana URL: http://<EC2-PUBLIC-IP>:{{ grafana_port.stdout }}"
+          - "Username: admin"
+          - "Password: {{ grafana_pass.stdout }}"
