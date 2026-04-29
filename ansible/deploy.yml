@@ -133,6 +133,14 @@
               repository: "{{ frontend_repo }}"
               tag: "{{ frontend_tag }}"
 
+    - name: Add Prometheus repo
+      become: false
+      shell: |
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+        helm repo update
+      args:
+        executable: /bin/bash          
+
     # 11. Install Monitoring Stack
     - name: Install Prometheus + Grafana
       become: false
